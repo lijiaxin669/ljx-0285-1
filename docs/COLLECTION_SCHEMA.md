@@ -30,6 +30,11 @@
 - `available`: 可租数量（= 总库存 - 已租出数量）
 - **约束**: `available >= 0`，通过 MongoDB 事务保证库存不为负
 
+**SKU 删除策略:**
+- 采用**硬删除**方式（`DeleteOne`）
+- 删除前校验：若存在 `pending` / `paid` / `picked_up` / `overdue` / `returned` 状态的在途订单，则拒绝删除并提示在途订单数量
+- 仅当该 SKU 无任何在途订单时允许删除
+
 ---
 
 ### 2. `stores` 集合 - 门店

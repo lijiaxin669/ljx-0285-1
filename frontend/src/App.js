@@ -5,6 +5,7 @@ import ProductDetail from './pages/ProductDetail';
 import Orders from './pages/Orders';
 import Admin from './pages/Admin';
 import MyOrders from './pages/MyOrders';
+import AdminSKUs from './pages/AdminSKUs';
 
 function App() {
   return (
@@ -20,7 +21,13 @@ function App() {
               我的订单
             </NavLink>
             <NavLink to="/admin">
-              管理后台
+              扫码管理
+            </NavLink>
+            <NavLink to="/admin/skus">
+              SKU 管理
+            </NavLink>
+            <NavLink to="/admin/orders">
+              订单管理
             </NavLink>
           </nav>
         </div>
@@ -31,6 +38,7 @@ function App() {
           <Route path="/sku/:id" element={<ProductDetail />} />
           <Route path="/orders" element={<MyOrders />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/admin/skus" element={<AdminSKUs />} />
           <Route path="/admin/orders" element={<Orders />} />
         </Routes>
       </main>

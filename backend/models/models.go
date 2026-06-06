@@ -146,3 +146,57 @@ type ExtendPaymentResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
 }
+
+type InventoryLogReason string
+
+const (
+	ReasonPurchase  InventoryLogReason = "purchase"
+	ReasonDamaged   InventoryLogReason = "damaged"
+	ReasonInventory InventoryLogReason = "inventory"
+	ReasonOther     InventoryLogReason = "other"
+)
+
+var reasonNames = map[InventoryLogReason]string{
+	ReasonPurchase:  "采购入库",
+	ReasonDamaged:   "损坏报废",
+	ReasonInventory: "盘点修正",
+	ReasonOther:     "其他",
+}
+
+func (r InventoryLogReason) IsValid() bool {
+	_, ok := reasonNames[r]
+	return ok
+}
+
+func (r InventoryLogReason) Name() string {
+	if name, ok := reasonNames[r]; ok {
+		return name
+	}
+	return string(r)
+}
+
+type InventoryLog struct {
+	ID              primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	SKUID           primitive.ObjectID `bson:"skuId" json:"skuId"`
+	SKUName         string             `bson:"skuName" json:"skuName"`
+	AdjustAmount    int                `bson:"adjustAmount" json:"adjustAmount"`
+	BeforeAvailable int               `bson:"beforeAvailable" json:"beforeAvailable"`
+	AfterAvailable  int                `bson:"afterAvailable" json:"afterAvailable"`
+	Reason          InventoryLogReason `bson:"reason" json:"reason"`
+	ReasonName      string             `bson:"reasonName" json:"reasonName"`
+	Remark          string             `bson:"remark,omitempty" json:"remark,omitempty"`
+	Operator        string             `bson:"operator" json:"operator"`
+	CreatedAt       time.Time          `bson:"createdAt" json:"createdAt"`
+}
+
+type AdjustStockRequest struct {
+	AdjustAmount int                `json:"adjustAmount" binding:"required,ne=0"`
+	Reason       InventoryLogReason `json:"reason" binding:"required,oneof=purchase damaged inventory other"`
+	Remark       string             `json:"remark"`
+}
+
+type AdjustStockResponse struct {
+	Success       bool `json:"success"`
+	BeforeAvailable int `json:"beforeAvailable"`
+	AfterAvailable  int `json:"afterAvailable"`
+}

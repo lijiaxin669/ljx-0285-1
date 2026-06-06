@@ -19,6 +19,11 @@ export const skuApi = {
   getCategories: () => api.get('/skus/categories'),
   getSKUs: (params) => api.get('/skus', { params }),
   getSKU: (id) => api.get(`/skus/${id}`),
+  createSKU: (data) => api.post('/skus', data),
+  updateSKU: (id, data) => api.put(`/skus/${id}`, data),
+  deleteSKU: (id) => api.delete(`/skus/${id}`),
+  adjustStock: (id, data) => api.post(`/skus/${id}/adjust-stock`, data),
+  getInventoryLogs: (params) => api.get('/inventory-logs', { params }),
   calculatePrice: (skuId, rentalDays) => 
     api.get('/orders/calculate', { params: { skuId, rentalDays } }),
 };
