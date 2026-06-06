@@ -1,0 +1,805 @@
+openapi: 3.0.3
+info:
+  title: 乐行连锁 - 乐器租赁 API
+  description: 乐行连锁线上乐器租赁系统后端 API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+    description: API v1
+tags:
+  - name: Health
+    description: 健康检查
+  - name: SKU
+    description: 商品库存管理
+  - name: Store
+    description: 门店管理
+  - name: Order
+    description: 订单管理
+
+paths:
+  /healthz:
+    get:
+      tags: [Health]
+      summary: 健康检查
+      responses:
+        '200':
+          description: 服务正常
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: 服务异常
+
+  /skus/categories:
+    get:
+      tags: [SKU]
+      summary: 获取乐器分类列表
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryListResponse'
+
+  /skus:
+    get:
+      tags: [SKU]
+      summary: 获取 SKU 列表
+      parameters:
+        - in: query
+          name: category
+          schema:
+            type: string
+            enum: [string, wind, percussion, keyboard, electronic]
+          description: 乐器分类
+        - in: query
+          name: minPrice
+          schema:
+            type: number
+          description: 最低日租金
+        - in: query
+          name: maxPrice
+          schema:
+            type: number
+          description: 最高日租金
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: 页码
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+          description: 每页数量
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SKUListResponse'
+    post:
+      tags: [SKU]
+      summary: 创建 SKU
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSKURequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SKUResponse'
+
+  /skus/{id}:
+    get:
+      tags: [SKU]
+      summary: 获取 SKU 详情
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SKUResponse'
+        '404':
+          description: SKU 不存在
+    put:
+      tags: [SKU]
+      summary: 更新 SKU
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSKURequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SKUResponse'
+        '400':
+          description: 库存不能为负
+        '404':
+          description: SKU 不存在
+    delete:
+      tags: [SKU]
+      summary: 删除 SKU
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+        '404':
+          description: SKU 不存在
+
+  /stores:
+    get:
+      tags: [Store]
+      summary: 获取门店列表
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreListResponse'
+    post:
+      tags: [Store]
+      summary: 创建门店
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStoreRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreResponse'
+
+  /stores/{id}:
+    get:
+      tags: [Store]
+      summary: 获取门店详情
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoreResponse'
+        '404':
+          description: 门店不存在
+
+  /orders/calculate:
+    get:
+      tags: [Order]
+      summary: 计算租赁价格
+      parameters:
+        - in: query
+          name: skuId
+          required: true
+          schema:
+            type: string
+          description: SKU ID
+        - in: query
+          name: rentalDays
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: 租赁天数
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceCalculateResponse'
+
+  /orders:
+    get:
+      tags: [Order]
+      summary: 获取订单列表
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, paid, picked_up, returned, inspected, completed, cancelled, overdue]
+          description: 订单状态
+        - in: query
+          name: phone
+          schema:
+            type: string
+          description: 客户手机号（模糊匹配）
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: 页码
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+          description: 每页数量
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderListResponse'
+    post:
+      tags: [Order]
+      summary: 创建订单
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          description: 库存不足或参数错误
+
+  /orders/{id}:
+    get:
+      tags: [Order]
+      summary: 获取订单详情
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '404':
+          description: 订单不存在
+
+  /orders/short/{shortCode}:
+    get:
+      tags: [Order]
+      summary: 通过短码获取订单详情
+      parameters:
+        - in: path
+          name: shortCode
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '404':
+          description: 订单不存在
+
+  /orders/{id}/cancel:
+    post:
+      tags: [Order]
+      summary: 取消订单
+      description: 仅允许 pending 且未出库的订单取消
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          description: 订单状态不允许取消或已出库
+
+  /orders/pay:
+    post:
+      tags: [Order]
+      summary: Mock 支付订单
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '400':
+          description: 订单状态不允许支付
+
+  /orders/pickup:
+    post:
+      tags: [Order]
+      summary: 确认取货
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PickupRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          description: 订单状态不允许取货
+
+  /orders/return:
+    post:
+      tags: [Order]
+      summary: 确认归还
+      description: 自动计算逾期天数和滞纳金
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReturnRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          description: 订单状态不允许归还
+
+  /orders/inspect:
+    post:
+      tags: [Order]
+      summary: 质检
+      description: 归还后24小时内质检通过后释放库存
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InspectRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          description: 订单状态不允许质检或超过24小时
+
+  /orders/scan:
+    post:
+      tags: [Order]
+      summary: 扫码更新订单状态
+      description: 管理端扫码短码更新订单状态（模拟扫码）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanUpdateRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          description: 参数错误或状态不匹配
+        '404':
+          description: 订单不存在
+
+components:
+  schemas:
+    Response:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+        error:
+          type: string
+
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        timestamp:
+          type: string
+        mongodb:
+          type: string
+
+    Category:
+      type: object
+      properties:
+        key:
+          type: string
+          enum: [string, wind, percussion, keyboard, electronic]
+        name:
+          type: string
+
+    CategoryListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Response'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                categories:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Category'
+
+    SKU:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+        brand:
+          type: string
+        model:
+          type: string
+        description:
+          type: string
+        dailyRate:
+          type: number
+        deposit:
+          type: number
+        totalStock:
+          type: integer
+        available:
+          type: integer
+        imageUrl:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    SKUResponse:
+      allOf:
+        - $ref: '#/components/schemas/Response'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/SKU'
+
+    SKUListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Response'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/SKU'
+                total:
+                  type: integer
+                page:
+                  type: integer
+                limit:
+                  type: integer
+
+    CreateSKURequest:
+      type: object
+      required: [name, category, brand, model, dailyRate, deposit, totalStock]
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+          enum: [string, wind, percussion, keyboard, electronic]
+        brand:
+          type: string
+        model:
+          type: string
+        description:
+          type: string
+        dailyRate:
+          type: number
+          minimum: 0
+        deposit:
+          type: number
+          minimum: 0
+        totalStock:
+          type: integer
+          minimum: 0
+
+    UpdateSKURequest:
+      $ref: '#/components/schemas/CreateSKURequest'
+
+    Store:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        address:
+          type: string
+        phone:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    StoreResponse:
+      allOf:
+        - $ref: '#/components/schemas/Response'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Store'
+
+    StoreListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Response'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Store'
+
+    CreateStoreRequest:
+      type: object
+      required: [name, address]
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        phone:
+          type: string
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+        orderNo:
+          type: string
+        shortCode:
+          type: string
+        skuId:
+          type: string
+        sku:
+          $ref: '#/components/schemas/SKU'
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+        storeId:
+          type: string
+        store:
+          $ref: '#/components/schemas/Store'
+        rentalDays:
+          type: integer
+        dailyRate:
+          type: number
+        totalAmount:
+          type: number
+        deposit:
+          type: number
+        status:
+          type: string
+          enum: [pending, paid, picked_up, returned, inspected, completed, cancelled, overdue]
+        startDate:
+          type: string
+        expectedEndDate:
+          type: string
+        pickedUpAt:
+          type: string
+        returnedAt:
+          type: string
+        inspectedAt:
+          type: string
+        overdueDays:
+          type: integer
+        lateFee:
+          type: number
+        remark:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    OrderResponse:
+      allOf:
+        - $ref: '#/components/schemas/Response'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Order'
+
+    OrderListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Response'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Order'
+                total:
+                  type: integer
+                page:
+                  type: integer
+                limit:
+                  type: integer
+
+    CreateOrderRequest:
+      type: object
+      required: [skuId, customerName, customerPhone, storeId, rentalDays]
+      properties:
+        skuId:
+          type: string
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+        storeId:
+          type: string
+        rentalDays:
+          type: integer
+          minimum: 1
+
+    PriceCalculateResponse:
+      allOf:
+        - $ref: '#/components/schemas/Response'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                dailyRate:
+                  type: number
+                rentalDays:
+                  type: integer
+                total:
+                  type: number
+                deposit:
+                  type: number
+                amountDue:
+                  type: number
+
+    PaymentRequest:
+      type: object
+      required: [orderId, method]
+      properties:
+        orderId:
+          type: string
+        method:
+          type: string
+
+    PaymentResponse:
+      allOf:
+        - $ref: '#/components/schemas/Response'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                message:
+                  type: string
+
+    PickupRequest:
+      type: object
+      required: [orderId]
+      properties:
+        orderId:
+          type: string
+
+    ReturnRequest:
+      type: object
+      required: [orderId]
+      properties:
+        orderId:
+          type: string
+        remark:
+          type: string
+
+    InspectRequest:
+      type: object
+      required: [orderId]
+      properties:
+        orderId:
+          type: string
+        pass:
+          type: boolean
+          default: true
+        remark:
+          type: string
+
+    ScanUpdateRequest:
+      type: object
+      required: [shortCode, action]
+      properties:
+        shortCode:
+          type: string
+        action:
+          type: string
+          enum: [pickup, return, inspect]

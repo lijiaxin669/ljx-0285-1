@@ -1,0 +1,112 @@
+package models
+
+import (
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
+type InstrumentCategory string
+
+const (
+	CategoryString   InstrumentCategory = "string"
+	CategoryWind     InstrumentCategory = "wind"
+	CategoryPercussion InstrumentCategory = "percussion"
+	CategoryKeyboard InstrumentCategory = "keyboard"
+	CategoryElectronic InstrumentCategory = "electronic"
+)
+
+type SKU struct {
+	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Name        string             `bson:"name" json:"name" binding:"required"`
+	Category    InstrumentCategory `bson:"category" json:"category" binding:"required,oneof=string wind percussion keyboard electronic"`
+	Brand       string             `bson:"brand" json:"brand" binding:"required"`
+	Model       string             `bson:"model" json:"model" binding:"required"`
+	Description string             `bson:"description" json:"description"`
+	DailyRate   float64            `bson:"dailyRate" json:"dailyRate" binding:"required,min=0"`
+	Deposit     float64            `bson:"deposit" json:"deposit" binding:"required,min=0"`
+	TotalStock  int                `bson:"totalStock" json:"totalStock" binding:"required,min=0"`
+	Available   int                `bson:"available" json:"available" binding:"min=0"`
+	ImageURL    string             `bson:"imageUrl" json:"imageUrl"`
+	CreatedAt   time.Time          `bson:"createdAt" json:"createdAt"`
+	UpdatedAt   time.Time          `bson:"updatedAt" json:"updatedAt"`
+}
+
+type OrderStatus string
+
+const (
+	OrderStatusPending    OrderStatus = "pending"
+	OrderStatusPaid       OrderStatus = "paid"
+	OrderStatusPickedUp   OrderStatus = "picked_up"
+	OrderStatusReturned   OrderStatus = "returned"
+	OrderStatusInspected  OrderStatus = "inspected"
+	OrderStatusCompleted  OrderStatus = "completed"
+	OrderStatusCancelled  OrderStatus = "cancelled"
+	OrderStatusOverdue    OrderStatus = "overdue"
+)
+
+type Order struct {
+	ID             primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	OrderNo        string             `bson:"orderNo" json:"orderNo"`
+	ShortCode      string             `bson:"shortCode" json:"shortCode"`
+	SKUID          primitive.ObjectID `bson:"skuId" json:"skuId"`
+	SKU            *SKU               `bson:"sku,omitempty" json:"sku,omitempty"`
+	CustomerName   string             `bson:"customerName" json:"customerName" binding:"required"`
+	CustomerPhone  string             `bson:"customerPhone" json:"customerPhone" binding:"required"`
+	StoreID        primitive.ObjectID `bson:"storeId" json:"storeId"`
+	Store          *Store             `bson:"store,omitempty" json:"store,omitempty"`
+	RentalDays     int                `bson:"rentalDays" json:"rentalDays" binding:"required,min=1"`
+	DailyRate      float64            `bson:"dailyRate" json:"dailyRate"`
+	TotalAmount    float64            `bson:"totalAmount" json:"totalAmount"`
+	Deposit        float64            `bson:"deposit" json:"deposit"`
+	Status         OrderStatus        `bson:"status" json:"status"`
+	StartDate      time.Time          `bson:"startDate" json:"startDate"`
+	ExpectedEndDate time.Time         `bson:"expectedEndDate" json:"expectedEndDate"`
+	PickedUpAt     *time.Time         `bson:"pickedUpAt,omitempty" json:"pickedUpAt,omitempty"`
+	ReturnedAt     *time.Time         `bson:"returnedAt,omitempty" json:"returnedAt,omitempty"`
+	InspectedAt    *time.Time         `bson:"inspectedAt,omitempty" json:"inspectedAt,omitempty"`
+	OverdueDays    int                `bson:"overdueDays" json:"overdueDays"`
+	LateFee        float64            `bson:"lateFee" json:"lateFee"`
+	Remark         string             `bson:"remark,omitempty" json:"remark,omitempty"`
+	CreatedAt      time.Time          `bson:"createdAt" json:"createdAt"`
+	UpdatedAt      time.Time          `bson:"updatedAt" json:"updatedAt"`
+}
+
+type Store struct {
+	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Name      string             `bson:"name" json:"name" binding:"required"`
+	Address   string             `bson:"address" json:"address" binding:"required"`
+	Phone     string             `bson:"phone" json:"phone"`
+	CreatedAt time.Time          `bson:"createdAt" json:"createdAt"`
+	UpdatedAt time.Time          `bson:"updatedAt" json:"updatedAt"`
+}
+
+type PaymentRequest struct {
+	OrderID string `json:"orderId" binding:"required"`
+	Method  string `json:"method" binding:"required"`
+}
+
+type PaymentResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
+type PickupRequest struct {
+	OrderID string `json:"orderId" binding:"required"`
+}
+
+type ReturnRequest struct {
+	OrderID string `json:"orderId" binding:"required"`
+	Remark  string `json:"remark"`
+}
+
+type InspectRequest struct {
+	OrderID string `json:"orderId" binding:"required"`
+	Pass    bool   `json:"pass"`
+	Remark  string `json:"remark"`
+}
+
+type ScanUpdateRequest struct {
+	ShortCode string `json:"shortCode" binding:"required"`
+	Action    string `json:"action" binding:"required,oneof=pickup return inspect"`
+}
