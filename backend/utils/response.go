@@ -46,3 +46,15 @@ type StockError struct {
 func (e *StockError) Error() string {
 	return e.Message
 }
+
+type ValidationError struct {
+	Message string
+}
+
+func (e *ValidationError) Error() string {
+	return e.Message
+}
+
+func NewValidationError(msg string) *ValidationError {
+	return &ValidationError{Message: msg}
+}

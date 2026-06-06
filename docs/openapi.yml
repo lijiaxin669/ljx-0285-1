@@ -454,6 +454,68 @@ paths:
         '404':
           description: 订单不存在
 
+  /orders/{id}/extend-preview:
+    post:
+      tags: [Order]
+      summary: 续租报价预览
+      description: 计算续租费用和新租期信息
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: 订单 ID
+        - in: query
+          name: additionalDays
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 14
+          description: 追加续租天数
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtendPreviewResponse'
+        '400':
+          description: 订单状态不允许续租或参数错误
+        '404':
+          description: 订单不存在
+
+  /orders/{id}/extend:
+    post:
+      tags: [Order]
+      summary: 确认续租
+      description: 支付续租费用并更新租期（Mock 支付）
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: 订单 ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtendRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtendPaymentResponse'
+        '400':
+          description: 订单状态不允许续租或参数错误
+        '404':
+          description: 订单不存在
+
 components:
   schemas:
     Response:
@@ -675,12 +737,85 @@ components:
           type: integer
         lateFee:
           type: number
+        extensions:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderExtension'
+        extensionCount:
+          type: integer
+          default: 0
         remark:
           type: string
         createdAt:
           type: string
         updatedAt:
           type: string
+
+    OrderExtension:
+      type: object
+      properties:
+        additionalDays:
+          type: integer
+        fee:
+          type: number
+        paidAt:
+          type: string
+        previousEndDate:
+          type: string
+        newEndDate:
+          type: string
+
+    ExtendPreviewResponse:
+      allOf:
+        - $ref: '#/components/schemas/Response'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                additionalDays:
+                  type: integer
+                additionalFee:
+                  type: number
+                currentTotalAmount:
+                  type: number
+                newTotalAmount:
+                  type: number
+                currentRentalDays:
+                  type: integer
+                newRentalDays:
+                  type: integer
+                previousEndDate:
+                  type: string
+                newEndDate:
+                  type: string
+                dailyRate:
+                  type: number
+
+    ExtendRequest:
+      type: object
+      required: [additionalDays, method]
+      properties:
+        additionalDays:
+          type: integer
+          minimum: 1
+          maximum: 14
+        method:
+          type: string
+          default: mock
+
+    ExtendPaymentResponse:
+      allOf:
+        - $ref: '#/components/schemas/Response'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                message:
+                  type: string
 
     OrderResponse:
       allOf:

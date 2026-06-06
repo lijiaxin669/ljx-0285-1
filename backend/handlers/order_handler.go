@@ -734,7 +734,7 @@ func ScanUpdateOrderByShortCode(c *gin.Context) {
 		}
 
 		skuCol := db.Collection("skus")
-		_, err = skuCol.UpdateOne(ctx, bson.M{"_id": order.SKUID}, bson.M{"$inc": bson.M{"available": 1}})
+		_, err := skuCol.UpdateOne(ctx, bson.M{"_id": order.SKUID}, bson.M{"$inc": bson.M{"available": 1}})
 		if err != nil {
 			utils.InternalError(c, err.Error())
 			return
@@ -766,4 +766,164 @@ func ScanUpdateOrderByShortCode(c *gin.Context) {
 	default:
 		utils.BadRequest(c, "Invalid action. Must be pickup, return, or inspect")
 	}
+}
+
+func ExtendOrderPreview(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	id, err := primitive.ObjectIDFromHex(c.Param("id"))
+	if err != nil {
+		utils.BadRequest(c, "Invalid Order ID")
+		return
+	}
+
+	var req models.ExtendPreviewRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		utils.BadRequest(c, err.Error())
+		return
+	}
+
+	var order models.Order
+	orderCol := db.Collection("orders")
+	if err := orderCol.FindOne(ctx, bson.M{"_id": id}).Decode(&order); err != nil {
+		if err == mongo.ErrNoDocuments {
+			utils.NotFound(c, "Order not found")
+			return
+		}
+		utils.InternalError(c, err.Error())
+		return
+	}
+
+	if order.Status != models.OrderStatusPickedUp {
+		utils.BadRequest(c, "Only picked up orders can be extended")
+		return
+	}
+
+	if order.ExtensionCount >= 2 {
+		utils.BadRequest(c, "Maximum 2 extensions allowed per order")
+		return
+	}
+
+	daysUntilEnd := int(time.Until(order.ExpectedEndDate).Hours() / 24)
+	if daysUntilEnd < 1 {
+		utils.BadRequest(c, "Extension must be requested at least 1 day before expected return date")
+		return
+	}
+
+	additionalFee := float64(req.AdditionalDays) * order.DailyRate
+	newEndDate := order.ExpectedEndDate.AddDate(0, 0, req.AdditionalDays)
+
+	preview := models.ExtendPreviewResponse{
+		AdditionalDays:     req.AdditionalDays,
+		AdditionalFee:      additionalFee,
+		CurrentTotalAmount: order.TotalAmount,
+		NewTotalAmount:     order.TotalAmount + additionalFee,
+		CurrentRentalDays:  order.RentalDays,
+		NewRentalDays:      order.RentalDays + req.AdditionalDays,
+		PreviousEndDate:    order.ExpectedEndDate,
+		NewEndDate:         newEndDate,
+		DailyRate:          order.DailyRate,
+	}
+
+	utils.Success(c, preview)
+}
+
+func ExtendOrder(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	id, err := primitive.ObjectIDFromHex(c.Param("id"))
+	if err != nil {
+		utils.BadRequest(c, "Invalid Order ID")
+		return
+	}
+
+	var req models.ExtendRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, err.Error())
+		return
+	}
+
+	orderCol := db.Collection("orders")
+	session, err := db.GetClient().StartSession()
+	if err != nil {
+		utils.InternalError(c, err.Error())
+		return
+	}
+	defer session.EndSession(ctx)
+
+	var order models.Order
+	var extension models.OrderExtension
+
+	_, err = session.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
+		if err := orderCol.FindOne(sessCtx, bson.M{"_id": id}).Decode(&order); err != nil {
+			return nil, err
+		}
+
+		if order.Status != models.OrderStatusPickedUp {
+			return nil, utils.NewValidationError("Only picked up orders can be extended")
+		}
+
+		if order.ExtensionCount >= 2 {
+			return nil, utils.NewValidationError("Maximum 2 extensions allowed per order")
+		}
+
+		daysUntilEnd := int(time.Until(order.ExpectedEndDate).Hours() / 24)
+		if daysUntilEnd < 1 {
+			return nil, utils.NewValidationError("Extension must be requested at least 1 day before expected return date")
+		}
+
+		additionalFee := float64(req.AdditionalDays) * order.DailyRate
+		newEndDate := order.ExpectedEndDate.AddDate(0, 0, req.AdditionalDays)
+		now := time.Now()
+
+		extension = models.OrderExtension{
+			AdditionalDays:  req.AdditionalDays,
+			Fee:             additionalFee,
+			PaidAt:          now,
+			PreviousEndDate: order.ExpectedEndDate,
+			NewEndDate:      newEndDate,
+		}
+
+		order.ExtensionCount++
+		order.RentalDays += req.AdditionalDays
+		order.TotalAmount += additionalFee
+		order.ExpectedEndDate = newEndDate
+		order.UpdatedAt = now
+
+		if _, err := orderCol.UpdateOne(sessCtx, bson.M{"_id": id}, bson.M{
+			"$set": bson.M{
+				"extensionCount":  order.ExtensionCount,
+				"rentalDays":      order.RentalDays,
+				"totalAmount":     order.TotalAmount,
+				"expectedEndDate": order.ExpectedEndDate,
+				"updatedAt":       order.UpdatedAt,
+			},
+			"$push": bson.M{
+				"extensions": extension,
+			},
+		}); err != nil {
+			return nil, err
+		}
+
+		return nil, nil
+	})
+
+	if err != nil {
+		if verr, ok := err.(*utils.ValidationError); ok {
+			utils.BadRequest(c, verr.Error())
+			return
+		}
+		utils.InternalError(c, err.Error())
+		return
+	}
+
+	order.SKU = getSKUByID(ctx, order.SKUID)
+	order.Store = getStoreByID(ctx, order.StoreID)
+
+	utils.Success(c, models.ExtendPaymentResponse{
+		Success: true,
+		Message: "Extension payment successful (Mock)",
+	})
 }

@@ -43,6 +43,10 @@ export const orderApi = {
     api.post('/orders/inspect', { orderId, pass, remark }),
   scanUpdate: (shortCode, action) => 
     api.post('/orders/scan', { shortCode, action }),
+  extendPreview: (orderId, additionalDays) => 
+    api.post(`/orders/${orderId}/extend-preview`, null, { params: { additionalDays } }),
+  extendOrder: (orderId, additionalDays, method = 'mock') => 
+    api.post(`/orders/${orderId}/extend`, { additionalDays, method }),
 };
 
 export default api;

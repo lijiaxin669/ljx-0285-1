@@ -45,3 +45,7 @@ func Disconnect() {
 func Collection(name string) *mongo.Collection {
 	return DB.Collection(name)
 }
+
+func GetClient() *mongo.Client {
+	return Client
+}

@@ -28,11 +28,13 @@ function Admin() {
   const [shortCode, setShortCode] = useState('');
   const [currentOrder, setCurrentOrder] = useState(null);
   const [message, setMessage] = useState(null);
+  const [showExtensions, setShowExtensions] = useState(false);
 
   const lookupMutation = useMutation({
     mutationFn: (code) => orderApi.getOrderByShortCode(code),
     onSuccess: (response) => {
       setCurrentOrder(response.data);
+      setShowExtensions(false);
       setMessage(null);
     },
     onError: (error) => {
@@ -73,6 +75,63 @@ function Admin() {
   const canPickup = currentOrder?.status === 'paid';
   const canReturn = currentOrder?.status === 'picked_up' || currentOrder?.status === 'overdue';
   const canInspect = currentOrder?.status === 'returned';
+
+  const renderExtensionDetails = (order) => {
+    if (!order.extensions || order.extensions.length === 0) return null;
+
+    return (
+      <div style={{ marginTop: 16 }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '12px 16px',
+            background: '#f0f4ff',
+            borderRadius: 4,
+            cursor: 'pointer',
+            userSelect: 'none',
+          }}
+          onClick={() => setShowExtensions(!showExtensions)}
+        >
+          <span style={{ fontWeight: 600 }}>
+            📅 续租记录 ({order.extensions.length} 次)
+          </span>
+          <span style={{ fontSize: 12, color: '#666' }}>
+            {showExtensions ? '收起 ▲' : '展开 ▼'}
+          </span>
+        </div>
+        {showExtensions && (
+          <div style={{ padding: 16, background: '#fafafa', border: '1px solid #e0e0e0', borderTop: 'none', borderRadius: '0 0 4px 4px' }}>
+            {order.extensions.map((ext, idx) => (
+              <div key={idx} style={{
+                padding: 12,
+                marginBottom: idx < order.extensions.length - 1 ? 12 : 0,
+                background: '#fff',
+                border: '1px solid #e0e0e0',
+                borderRadius: 4,
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontWeight: 600, color: '#27ae60' }}>续租 {idx + 1}</span>
+                  <span style={{ color: '#e67e22', fontWeight: 600 }}>
+                    +{ext.additionalDays} 天 · ¥{ext.fee.toFixed(2)}
+                  </span>
+                </div>
+                <div style={{ fontSize: 13, color: '#666' }}>
+                  <div>
+                    {dayjs(ext.previousEndDate).format('YYYY-MM-DD')} → {dayjs(ext.newEndDate).format('YYYY-MM-DD')}
+                  </div>
+                  <div style={{ marginTop: 4, color: '#999' }}>
+                    支付时间: {dayjs(ext.paidAt).format('YYYY-MM-DD HH:mm')}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div>
@@ -143,7 +202,17 @@ function Admin() {
           <div className="order-detail-section">
             <div className="order-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                <span className="order-no">{currentOrder.orderNo}</span>
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                  <span className="order-no">{currentOrder.orderNo}</span>
+                  {(currentOrder.extensionCount || 0) > 0 && (
+                    <span className="badge" style={{
+                      padding: '2px 8px', background: '#e8f5e9',
+                      color: '#2e7d32', borderRadius: 12, fontSize: 12
+                    }}>
+                      已续租 {currentOrder.extensionCount} 次
+                    </span>
+                  )}
+                </div>
                 <span className={`status-badge status-${currentOrder.status}`}>
                   {statusNames[currentOrder.status]}
                 </span>
@@ -176,11 +245,19 @@ function Admin() {
               <span>押金: ¥{currentOrder.deposit.toFixed(2)}</span>
             </div>
 
+            <div className="order-info" style={{ marginTop: 8, color: '#e67e22' }}>
+              <span style={{ fontWeight: 600 }}>
+                最新预计归还: {dayjs(currentOrder.expectedEndDate).format('YYYY-MM-DD')}
+              </span>
+            </div>
+
             {currentOrder.overdueDays > 0 && (
               <div className="alert alert-error" style={{ marginTop: 12 }}>
                 ⚠️ 逾期 {currentOrder.overdueDays} 天，需支付滞纳金 ¥{currentOrder.lateFee.toFixed(2)}
               </div>
             )}
+
+            {renderExtensionDetails(currentOrder)}
 
             <div className="order-info" style={{ marginTop: 12, fontSize: 12, color: '#999' }}>
               <span>下单: {dayjs(currentOrder.createdAt).format('YYYY-MM-DD HH:mm')}</span>

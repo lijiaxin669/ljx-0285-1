@@ -64,6 +64,8 @@ func main() {
 		api.POST("/orders/return", handlers.ReturnOrder)
 		api.POST("/orders/inspect", handlers.InspectOrder)
 		api.POST("/orders/scan", handlers.ScanUpdateOrderByShortCode)
+		api.POST("/orders/:id/extend-preview", handlers.ExtendOrderPreview)
+		api.POST("/orders/:id/extend", handlers.ExtendOrder)
 	}
 
 	log.Printf("Server starting on port %s", cfg.ServerPort)

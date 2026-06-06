@@ -46,30 +46,32 @@ const (
 )
 
 type Order struct {
-	ID             primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	OrderNo        string             `bson:"orderNo" json:"orderNo"`
-	ShortCode      string             `bson:"shortCode" json:"shortCode"`
-	SKUID          primitive.ObjectID `bson:"skuId" json:"skuId"`
-	SKU            *SKU               `bson:"sku,omitempty" json:"sku,omitempty"`
-	CustomerName   string             `bson:"customerName" json:"customerName" binding:"required"`
-	CustomerPhone  string             `bson:"customerPhone" json:"customerPhone" binding:"required"`
-	StoreID        primitive.ObjectID `bson:"storeId" json:"storeId"`
-	Store          *Store             `bson:"store,omitempty" json:"store,omitempty"`
-	RentalDays     int                `bson:"rentalDays" json:"rentalDays" binding:"required,min=1"`
-	DailyRate      float64            `bson:"dailyRate" json:"dailyRate"`
-	TotalAmount    float64            `bson:"totalAmount" json:"totalAmount"`
-	Deposit        float64            `bson:"deposit" json:"deposit"`
-	Status         OrderStatus        `bson:"status" json:"status"`
-	StartDate      time.Time          `bson:"startDate" json:"startDate"`
-	ExpectedEndDate time.Time         `bson:"expectedEndDate" json:"expectedEndDate"`
-	PickedUpAt     *time.Time         `bson:"pickedUpAt,omitempty" json:"pickedUpAt,omitempty"`
-	ReturnedAt     *time.Time         `bson:"returnedAt,omitempty" json:"returnedAt,omitempty"`
-	InspectedAt    *time.Time         `bson:"inspectedAt,omitempty" json:"inspectedAt,omitempty"`
-	OverdueDays    int                `bson:"overdueDays" json:"overdueDays"`
-	LateFee        float64            `bson:"lateFee" json:"lateFee"`
-	Remark         string             `bson:"remark,omitempty" json:"remark,omitempty"`
-	CreatedAt      time.Time          `bson:"createdAt" json:"createdAt"`
-	UpdatedAt      time.Time          `bson:"updatedAt" json:"updatedAt"`
+	ID               primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	OrderNo          string             `bson:"orderNo" json:"orderNo"`
+	ShortCode        string             `bson:"shortCode" json:"shortCode"`
+	SKUID            primitive.ObjectID `bson:"skuId" json:"skuId"`
+	SKU              *SKU               `bson:"sku,omitempty" json:"sku,omitempty"`
+	CustomerName     string             `bson:"customerName" json:"customerName" binding:"required"`
+	CustomerPhone    string             `bson:"customerPhone" json:"customerPhone" binding:"required"`
+	StoreID          primitive.ObjectID `bson:"storeId" json:"storeId"`
+	Store            *Store             `bson:"store,omitempty" json:"store,omitempty"`
+	RentalDays       int                `bson:"rentalDays" json:"rentalDays" binding:"required,min=1"`
+	DailyRate        float64            `bson:"dailyRate" json:"dailyRate"`
+	TotalAmount      float64            `bson:"totalAmount" json:"totalAmount"`
+	Deposit          float64            `bson:"deposit" json:"deposit"`
+	Status           OrderStatus        `bson:"status" json:"status"`
+	StartDate        time.Time          `bson:"startDate" json:"startDate"`
+	ExpectedEndDate  time.Time         `bson:"expectedEndDate" json:"expectedEndDate"`
+	PickedUpAt       *time.Time         `bson:"pickedUpAt,omitempty" json:"pickedUpAt,omitempty"`
+	ReturnedAt       *time.Time         `bson:"returnedAt,omitempty" json:"returnedAt,omitempty"`
+	InspectedAt      *time.Time         `bson:"inspectedAt,omitempty" json:"inspectedAt,omitempty"`
+	OverdueDays      int                `bson:"overdueDays" json:"overdueDays"`
+	LateFee          float64            `bson:"lateFee" json:"lateFee"`
+	Extensions       []OrderExtension   `bson:"extensions,omitempty" json:"extensions,omitempty"`
+	ExtensionCount   int                `bson:"extensionCount" json:"extensionCount"`
+	Remark           string             `bson:"remark,omitempty" json:"remark,omitempty"`
+	CreatedAt        time.Time          `bson:"createdAt" json:"createdAt"`
+	UpdatedAt        time.Time          `bson:"updatedAt" json:"updatedAt"`
 }
 
 type Store struct {
@@ -109,4 +111,38 @@ type InspectRequest struct {
 type ScanUpdateRequest struct {
 	ShortCode string `json:"shortCode" binding:"required"`
 	Action    string `json:"action" binding:"required,oneof=pickup return inspect"`
+}
+
+type OrderExtension struct {
+	AdditionalDays  int       `bson:"additionalDays" json:"additionalDays"`
+	Fee             float64   `bson:"fee" json:"fee"`
+	PaidAt          time.Time `bson:"paidAt" json:"paidAt"`
+	PreviousEndDate time.Time `bson:"previousEndDate" json:"previousEndDate"`
+	NewEndDate      time.Time `bson:"newEndDate" json:"newEndDate"`
+}
+
+type ExtendPreviewRequest struct {
+	AdditionalDays int `form:"additionalDays" binding:"required,min=1,max=14"`
+}
+
+type ExtendPreviewResponse struct {
+	AdditionalDays     int       `json:"additionalDays"`
+	AdditionalFee      float64   `json:"additionalFee"`
+	CurrentTotalAmount float64   `json:"currentTotalAmount"`
+	NewTotalAmount     float64   `json:"newTotalAmount"`
+	CurrentRentalDays  int       `json:"currentRentalDays"`
+	NewRentalDays      int       `json:"newRentalDays"`
+	PreviousEndDate    time.Time `json:"previousEndDate"`
+	NewEndDate         time.Time `json:"newEndDate"`
+	DailyRate          float64   `json:"dailyRate"`
+}
+
+type ExtendRequest struct {
+	AdditionalDays int    `json:"additionalDays" binding:"required,min=1,max=14"`
+	Method         string `json:"method" binding:"required"`
+}
+
+type ExtendPaymentResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
 }

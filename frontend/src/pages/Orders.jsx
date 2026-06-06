@@ -20,6 +20,7 @@ function Orders() {
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
   const [message, setMessage] = useState(null);
+  const [expandedOrderId, setExpandedOrderId] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['orders', status, page],
@@ -42,6 +43,10 @@ function Orders() {
   const orders = data?.data?.items || [];
   const total = data?.data?.total || 0;
   const totalPages = Math.ceil(total / 20);
+
+  const toggleExtensionDetails = (orderId) => {
+    setExpandedOrderId(expandedOrderId === orderId ? null : orderId);
+  };
 
   return (
     <div>
@@ -87,6 +92,14 @@ function Orders() {
                     <span className="short-code" style={{ marginLeft: 12 }}>
                       {order.shortCode}
                     </span>
+                    {(order.extensionCount || 0) > 0 && (
+                      <span className="badge" style={{
+                        marginLeft: 12, padding: '2px 8px', background: '#e8f5e9',
+                        color: '#2e7d32', borderRadius: 12, fontSize: 12
+                      }}>
+                      已续租 {order.extensionCount} 次
+                    </span>
+                    )}
                   </div>
                   <span className={`status-badge status-${order.status}`}>
                     {statusNames[order.status]}
@@ -111,10 +124,68 @@ function Orders() {
                   <span>{dayjs(order.createdAt).format('YYYY-MM-DD HH:mm')}</span>
                 </div>
 
+                <div className="order-info" style={{ marginTop: 8 }}>
+                  <span style={{ color: '#e67e22', fontWeight: 600 }}>
+                    预计归还: {dayjs(order.expectedEndDate).format('YYYY-MM-DD')}
+                  </span>
+                </div>
+
                 {order.store && (
                   <div className="order-info" style={{ marginTop: 8 }}>
                     <span className="store-badge">门店</span>
                     <span>{order.store.name}</span>
+                  </div>
+                )}
+
+                {order.extensions && order.extensions.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '8px 12px',
+                        background: '#f0f4ff',
+                        borderRadius: 4,
+                        cursor: 'pointer',
+                        fontSize: 13,
+                      }}
+                      onClick={() => toggleExtensionDetails(order.id)}
+                    >
+                      <span style={{ fontWeight: 600 }}>
+                        📅 续租记录 ({order.extensions.length} 次)
+                      </span>
+                      <span style={{ fontSize: 12, color: '#666' }}>
+                        {expandedOrderId === order.id ? '收起 ▲' : '展开 ▼'}
+                      </span>
+                    </div>
+                    {expandedOrderId === order.id && (
+                      <div style={{ padding: 12, background: '#fafafa', border: '1px solid #e0e0e0', borderTop: 'none', borderRadius: '0 0 4px 4px' }}>
+                        {order.extensions.map((ext, idx) => (
+                          <div key={idx} style={{
+                            padding: 10,
+                            marginBottom: idx < order.extensions.length - 1 ? 8 : 0,
+                            background: '#fff',
+                            border: '1px solid #e0e0e0',
+                            borderRadius: 4,
+                            fontSize: 12,
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                              <span style={{ fontWeight: 600, color: '#27ae60' }}>续租 {idx + 1}</span>
+                              <span style={{ color: '#e67e22', fontWeight: 600 }}>
+                                +{ext.additionalDays}天 · ¥{ext.fee.toFixed(2)}
+                              </span>
+                            </div>
+                            <div style={{ color: '#666' }}>
+                              {dayjs(ext.previousEndDate).format('YYYY-MM-DD')} → {dayjs(ext.newEndDate).format('YYYY-MM-DD')}
+                            </div>
+                            <div style={{ color: '#999', fontSize: 11, marginTop: 2 }}>
+                              支付: {dayjs(ext.paidAt).format('YYYY-MM-DD HH:mm')}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
